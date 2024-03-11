@@ -33,7 +33,6 @@ var (
 	clients         []*ethclient.Client
 	bridgeContracts []*BridgeContract
 	signers         []*bind.TransactOpts
-	err             error
 )
 
 func init() {
@@ -54,7 +53,7 @@ func init() {
 		}
 		signers[i], err = bind.NewKeyedTransactorWithChainID(privateKey, rpc.ChainId)
 		if err != nil {
-			log.Fatal("Error creating transactor")
+			log.Fatal("Error creating transactor", err.Error())
 		}
 
 		bridgeContracts[i], err = NewBridgeContract(*config.ContractAddress, clients[i])
