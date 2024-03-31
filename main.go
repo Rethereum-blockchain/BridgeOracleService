@@ -1,8 +1,10 @@
-package BridgeOracleService
+package main
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"log"
+	"os"
+	"os/signal"
 )
 
 var (
@@ -28,6 +30,10 @@ func main() {
 
 		go bridges[i].Run()
 	}
+
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt)
+	<-signalChan
 }
 
 func (bridge *Bridge) Run() {
@@ -40,6 +46,7 @@ func (bridge *Bridge) Run() {
 }
 
 func (bridge *Bridge) HandleLog(event *BridgeContractActionRequested) {
+	log.Println("Received event", event.Id)
 	action, err := bridge.Peer.BridgeContractCaller.Actions(&bind.CallOpts{}, event.Id)
 	if err != nil {
 		log.Println("Error calling peer contract [Actions]", err.Error())

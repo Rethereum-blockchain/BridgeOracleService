@@ -1,4 +1,4 @@
-package BridgeOracleService
+package main
 
 import (
 	"github.com/BurntSushi/toml"
@@ -16,7 +16,7 @@ type Rpc struct {
 }
 
 type Config struct {
-	Rpcs            []Rpc
+	RpcUrls         []Rpc
 	ContractAddress *common.Address
 	PrivateKey      string
 }
@@ -38,15 +38,18 @@ var (
 func init() {
 	_, err := toml.DecodeFile("config.toml", &config)
 	if err != nil {
-		log.Fatal("Error decoding config file")
+		log.Fatal("Error decoding config file", err.Error())
 	}
+
 	privateKey, err := crypto.HexToECDSA(config.PrivateKey)
 	if err != nil {
 		log.Fatal("Error creating private key")
 	}
 
-	clients = make([]*ethclient.Client, len(config.Rpcs))
-	for i, rpc := range config.Rpcs {
+	clients = make([]*ethclient.Client, len(config.RpcUrls))
+	signers := make([]*bind.TransactOpts, 2)
+	bridgeContracts := make([]*BridgeContract, 2)
+	for i, rpc := range config.RpcUrls {
 		clients[i], err = ethclient.Dial(rpc.Url)
 		if err != nil {
 			log.Fatal("Error connecting to rpc url: ", rpc.Url)

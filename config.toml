@@ -1,2 +1,6 @@
-RpcUrls = [""]
-BridgeAddress = ""
+RpcUrls = [
+    { ChainId = 1, Url = ""},
+    { ChainId = 2, Url = ""}
+]
+ContractAddress = ""
+PrivateKey = ""
