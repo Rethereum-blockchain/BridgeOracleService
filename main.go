@@ -2,6 +2,8 @@ package main
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/event"
 	"log"
 	"os"
 	"os/signal"
@@ -18,17 +20,17 @@ func main() {
 	for i, bridgeContract := range bridgeContracts {
 		bridges[i] = &Bridge{
 			Contract:   bridgeContract,
-			Peer:       bridgeContracts[i%(count-1)],
+			Peer:       bridgeContracts[i^1],
 			Transactor: signers[i],
 			Channel:    make(chan *BridgeContractActionRequested),
 		}
 
-		_, err := bridges[i].Contract.BridgeContractFilterer.WatchActionRequested(&bind.WatchOpts{}, bridges[i].Channel, nil)
+		sub, err := bridges[i].Contract.WatchActionRequested(&bind.WatchOpts{}, bridges[i].Channel, nil)
 		if err != nil {
-			log.Println("Error creating filter", err.Error())
+			log.Fatal("Error subscribing to events! ", err.Error())
 		}
 
-		go bridges[i].Run()
+		go bridges[i].Run(sub)
 	}
 
 	signalChan := make(chan os.Signal, 1)
@@ -36,17 +38,21 @@ func main() {
 	<-signalChan
 }
 
-func (bridge *Bridge) Run() {
+func (bridge *Bridge) Run(sub event.Subscription) {
+	log.Println("Started listening for ActionCreate")
 	for {
 		select {
 		case eventLog := <-bridge.Channel:
 			bridge.HandleLog(eventLog)
+		case err := <-sub.Err():
+			log.Fatal(err)
 		}
 	}
 }
 
 func (bridge *Bridge) HandleLog(event *BridgeContractActionRequested) {
-	log.Println("Received event", event.Id)
+	IdString := hexutil.Encode(event.Id[:])
+	log.Println("Received event", IdString)
 	action, err := bridge.Peer.BridgeContractCaller.Actions(&bind.CallOpts{}, event.Id)
 	if err != nil {
 		log.Println("Error calling peer contract [Actions]", err.Error())
@@ -54,7 +60,7 @@ func (bridge *Bridge) HandleLog(event *BridgeContractActionRequested) {
 	}
 
 	if !action {
-		log.Println(event.Id, "not found in peer contract")
+		log.Println(IdString, "not found in peer contract")
 		return
 	}
 
@@ -65,11 +71,11 @@ func (bridge *Bridge) HandleLog(event *BridgeContractActionRequested) {
 	}
 
 	if actionConsumed {
-		log.Println(event.Id, "already consumed")
+		log.Println(IdString, "already consumed")
 		return
 	}
 
-	log.Println("Authorizing action", event.Id)
+	log.Println("Authorizing action", IdString)
 	transcation, err := bridge.Contract.BridgeContractTransactor.AuthorizeAction(bridge.Transactor, event.Id)
 	if err != nil {
 		log.Println("Error authorizing action", err.Error())

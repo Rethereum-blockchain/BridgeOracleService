@@ -30,9 +30,9 @@ type Bridge struct {
 
 var (
 	config          Config
-	clients         []*ethclient.Client
-	bridgeContracts []*BridgeContract
-	signers         []*bind.TransactOpts
+	clients         [2]*ethclient.Client
+	bridgeContracts [2]*BridgeContract
+	signers         [2]*bind.TransactOpts
 )
 
 func init() {
@@ -46,14 +46,12 @@ func init() {
 		log.Fatal("Error creating private key")
 	}
 
-	clients = make([]*ethclient.Client, len(config.RpcUrls))
-	signers := make([]*bind.TransactOpts, 2)
-	bridgeContracts := make([]*BridgeContract, 2)
 	for i, rpc := range config.RpcUrls {
 		clients[i], err = ethclient.Dial(rpc.Url)
 		if err != nil {
 			log.Fatal("Error connecting to rpc url: ", rpc.Url)
 		}
+
 		signers[i], err = bind.NewKeyedTransactorWithChainID(privateKey, rpc.ChainId)
 		if err != nil {
 			log.Fatal("Error creating transactor", err.Error())
