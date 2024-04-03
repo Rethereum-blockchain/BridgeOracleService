@@ -21,18 +21,12 @@ type Config struct {
 	PrivateKey      string
 }
 
-type Bridge struct {
-	Contract   *BridgeContract
-	Peer       *BridgeContract
-	Transactor *bind.TransactOpts
-	Channel    chan *BridgeContractActionRequested
-}
-
 var (
 	config          Config
 	clients         [2]*ethclient.Client
 	bridgeContracts [2]*BridgeContract
 	signers         [2]*bind.TransactOpts
+	bridges         [2]*Bridge
 )
 
 func init() {
